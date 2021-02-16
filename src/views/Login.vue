@@ -2,36 +2,32 @@
   <div class="container pt-5">
     <div class="card">
       <div class="card-body">
-        <form action="" class="form-inline" @submit.prevent="onLogin()">
-          <input type="text" v-model="username" class="form-control" placeholder="Username">
-          <button class="btn btn-primary ml-2">Login</button>
+        <form action="" @submit.prevent="onLogin()">
+          <input type="text" v-model="name" class="form-control w-50 mt-3" placeholder="Name">
+          <input type="text" v-model="password" class="form-control w-50 mt-3" placeholder="Password">
+          <button class="btn btn-primary mt-4">Login</button>
         </form>
       </div>
     </div>
   </div>
 </template>
 <script>
-import io from 'socket.io-client'
+import axios from 'axios'
 export default {
   data () {
     return {
-      username: '',
-      socket: io('http://localhost:4000')
+      name: '',
+      password: ''
     }
   },
   methods: {
     onLogin () {
-      this.socket.emit('login', this.username)
+      axios.post('http://localhost:4000/login', { name: this.name, password: this.password }).then((response) => {
+        this.$router.push(`/home?room_id=${response.data[0].room_id}&id_user=${response.data[0].id}&name=${response.data[0].name}`)
+      }).catch((err) => {
+        alert(err.response.data.msg)
+      })
     }
-  },
-  mounted () {
-    this.socket.on('res-login', (status) => {
-      if (status) {
-        this.$router.push(`/home?username=${this.username}`)
-      } else {
-        alert('user not found')
-      }
-    })
   }
 }
 </script>

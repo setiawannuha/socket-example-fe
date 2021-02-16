@@ -2,10 +2,10 @@
   <div class="container pt-5">
     <div class="row">
       <div class="col-md-4">
-        <h3>List Users</h3>
+        <h3>Login : {{user_name}} ({{room_id}})</h3>
         <ul class="list-group">
-          <button v-for="(item, i) in users" :key="i" @click="getListChat(item.username)" class="list-group-item">
-            {{item.username}}
+          <button v-for="(item, i) in users" :key="i" @click="getListChat(item.id, item.name)" class="list-group-item">
+            {{item.name}}
           </button>
         </ul>
       </div>
@@ -15,8 +15,19 @@
             {{to}}
           </div>
           <div class="card-body">
-            <div v-for="(item, i) in chat" :key="i">
-              {{item.from}} : {{item.msg}}
+            <div class="mb-4" v-for="(item, i) in chat" :key="i">
+              <div v-if="item.from_name === user_name" class="text-right">
+                {{item.from_name}} : {{item.message}}
+                <div>
+                  <small class="">{{item.created_at}}</small>
+                </div>
+              </div>
+              <div v-else>
+                {{item.from_name}} : {{item.message}}
+                <div>
+                  <small class="">{{item.created_at}}</small>
+                </div>
+              </div>
             </div>
           </div>
           <div class="card-footer">
@@ -24,6 +35,24 @@
               <input v-model="text" type="text" class="form-control" placeholder="Text">
               <button class="btn btn-success ml-2">Send Message</button>
             </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row mt-5 pt-5">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h4>Pengumuman</h4>
+            <form action="" class="form-inline" @submit.prevent="sendBroadcast()">
+              <input v-model="textBroadcast" type="text" class="form-control" placeholder="Text">
+              <button class="btn btn-success ml-2">Send Broadcast</button>
+            </form>
+          </div>
+          <div class="card-body">
+            <div v-for="(item, i) in listBroadcast" :key="i">
+              {{item}}
+            </div>
           </div>
         </div>
       </div>
@@ -38,12 +67,17 @@ import io from 'socket.io-client'
 export default {
   data () {
     return {
+      user_name: this.$route.query.name,
+      room_id: this.$route.query.room_id,
       socket: io('http://localhost:4000'),
       text: '',
       users: [],
       chat: [],
-      from: this.$route.query.username,
-      to: ''
+      from: this.$route.query.id_user,
+      to: '',
+      to_id: '',
+      textBroadcast: '',
+      listBroadcast: []
     }
   },
   name: 'Home',
@@ -66,19 +100,20 @@ export default {
     //   })
     // }
     joinRoom () {
-      this.socket.emit('join-room', this.from)
+      this.socket.emit('join-room', this.room_id)
     },
     getListUsers () {
-      this.socket.emit('get-list-users', this.from)
+      this.socket.emit('get-list-users', this.from, this.room_id)
     },
     resGetListUsers () {
       this.socket.on('res-get-list-users', (users) => {
         this.users = users
       })
     },
-    getListChat (username) {
-      this.to = username
-      this.socket.emit('get-list-chat', { from: this.from, to: username })
+    getListChat (idUserTujuan, nama) {
+      this.to = nama
+      this.to_id = idUserTujuan
+      this.socket.emit('get-list-chat', { id_from: this.from, id_to: idUserTujuan, room_id: this.room_id })
       // this.resGetListChat()
     },
     resGetListChat () {
@@ -89,11 +124,24 @@ export default {
     sendMsg () {
       const data = {
         from: this.from,
-        to: this.to,
+        to: this.to_id,
         msg: this.text
       }
       this.socket.emit('send-message', data)
       this.text = ''
+    },
+    sendBroadcast () {
+      const data = {
+        from: this.from,
+        msg: this.textBroadcast
+      }
+      this.socket.emit('send-broadcast', data)
+      this.textBroadcast = ''
+    },
+    resBroadcast () {
+      this.socket.on('res-broadcast', (data) => {
+        this.listBroadcast = [...this.listBroadcast, data]
+      })
     }
   },
   mounted () {
@@ -103,6 +151,7 @@ export default {
     this.getListUsers()
     this.resGetListUsers()
     this.resGetListChat()
+    this.resBroadcast()
   }
 }
 </script>
